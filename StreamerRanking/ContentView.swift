@@ -2,55 +2,84 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var streamers: [Streamer] = []
+    @State private var isShowingPlatformSelector = false
+    @State private var dragOffset: CGSize = .zero
+    @State private var currentView: ViewType = .topStreamers
 
     var body: some View {
-        NavigationView {
-            List(streamers) { streamer in
-                VStack(alignment: .leading) {
-                    HStack {
-                        // 配信者のアイコンを表示
-                        AsyncImage(url: URL(string: streamer.profileImageUrl.replacingOccurrences(of: "{width}x{height}", with: "150x150"))) { image in
-                            image.resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 50, height: 50)
-                                .clipShape(Circle())
-                        } placeholder: {
-                            ProgressView()
-                        }
-                        VStack(alignment: .leading) {
-                            // 配信者の名前と視聴者数を表示
-                            Text(streamer.userName)
-                                .font(.headline)
-                            Text("Viewers: \(streamer.viewerCount)")
-                                .font(.subheadline)
-                            Text("Game: \(streamer.gameName)")
-                                .font(.subheadline)
-                        }
+        ZStack(alignment: .trailing) {
+            // 現在表示するビューを管理
+            switch currentView {
+            case .topStreamers:
+                StreamerListView(streamers: $streamers)
+                    .onAppear {
+                        fetchStreamers() // データを取得
                     }
-                    // 配信リンクを表示
-                    if let url = URL(string: "https://www.twitch.tv/\(streamer.userLogin)") {
-                        Link("Watch Stream", destination: url)
-                            .font(.footnote)
-                            .foregroundColor(.blue)
+            case .twitch:
+                TwitchView(streamers: $streamers)
+                    .onAppear {
+                        fetchStreamers() // 同じデータを取得
                     }
-                }
             }
-            .navigationTitle("Top Streamers")
-            .onAppear {
-                let api = TwitchAPI()
-                api.fetchTopStreamers { streamers in
-                    if let streamers = streamers {
-                        DispatchQueue.main.async {
-                            print("Fetched \(streamers.count) streamers") // デバッグ用
-                            self.streamers = streamers
+            
+            // サイドメニュー
+            if isShowingPlatformSelector {
+                PlatformSelectorView(
+                    isShowing: $isShowingPlatformSelector,
+                    currentView: $currentView,
+                    streamers: $streamers
+                )
+                .frame(width: UIScreen.main.bounds.width / 2)
+                .background(Color.white)
+                .offset(x: dragOffset.width > 0 ? dragOffset.width : 0)
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            if value.translation.width > 0 {
+                                dragOffset = value.translation
+                            }
                         }
-                    } else {
-                        print("Failed to fetch streamers")
+                        .onEnded { value in
+                            withAnimation {
+                                if value.translation.width > UIScreen.main.bounds.width / 6 {
+                                    isShowingPlatformSelector = false
+                                }
+                                dragOffset = .zero
+                            }
+                        }
+                )
+                .transition(.move(edge: .trailing))
+            }
+        }
+        .gesture(
+            DragGesture()
+                .onEnded { value in
+                    if value.translation.width < -100 {
+                        withAnimation {
+                            isShowingPlatformSelector = true
+                        }
                     }
                 }
+        )
+    }
+    
+    private func fetchStreamers() {
+        let api = TwitchAPI()
+        api.fetchTopStreamers { streamers in
+            if let streamers = streamers {
+                DispatchQueue.main.async {
+                    self.streamers = streamers
+                }
+            } else {
+                print("Failed to fetch streamers")
             }
         }
     }
+}
+
+enum ViewType {
+    case topStreamers
+    case twitch
 }
 
 struct ContentView_Previews: PreviewProvider {
