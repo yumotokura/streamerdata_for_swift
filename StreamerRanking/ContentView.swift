@@ -11,17 +11,17 @@ struct ContentView: View {
             // 現在表示するビューを管理
             switch currentView {
             case .topStreamers:
-                StreamerListView(streamers: $streamers)
+                StreamerListView(streamers: $streamers, isShowingPlatformSelector: $isShowingPlatformSelector)
                     .onAppear {
                         fetchStreamers() // データを取得
                     }
             case .twitch:
-                TwitchView(streamers: $streamers)
+                TwitchView(streamers: $streamers, isShowingPlatformSelector: $isShowingPlatformSelector)
                     .onAppear {
                         fetchStreamers() // 同じデータを取得
                     }
             }
-            
+
             // サイドメニュー
             if isShowingPlatformSelector {
                 PlatformSelectorView(
