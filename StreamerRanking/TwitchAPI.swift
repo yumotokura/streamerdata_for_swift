@@ -44,7 +44,7 @@ class TwitchAPI {
         task.resume()
     }
     
-    // 日本のトップストリーマー情報を取得するメソッド
+    // 日本のトップストリーマー情報を取得し、プロフィール画像を追加するメソッド
     func fetchTopStreamers(completion: @escaping ([Streamer]?) -> Void) {
         fetchAccessToken { success in
             guard success else {
@@ -73,8 +73,27 @@ class TwitchAPI {
                         print("Error response: \(errorResponse)")
                         completion(nil)
                     } else {
-                        let decodedResponse = try JSONDecoder().decode(TwitchResponse.self, from: data)
-                        completion(decodedResponse.data)
+                        var decodedResponse = try JSONDecoder().decode(TwitchResponse.self, from: data)
+                        
+                        // 各ストリーマーのユーザー情報を取得してプロフィール画像を追加
+                        let dispatchGroup = DispatchGroup()
+
+                        for (index, streamer) in decodedResponse.data.enumerated() {
+                            dispatchGroup.enter()
+                            self.fetchUserInfo(userId: streamer.userId) { userInfo in
+                                if let userInfo = userInfo {
+                                    decodedResponse.data[index].profileImageUrl = userInfo.profileImageUrl
+                                } else {
+                                    decodedResponse.data[index].profileImageUrl = "https://via.placeholder.com/150" // デフォルトの画像
+                                }
+                                dispatchGroup.leave()
+                            }
+                        }
+
+                        // 全てのプロフィール画像の取得が完了したらコールバックを呼ぶ
+                        dispatchGroup.notify(queue: .main) {
+                            completion(decodedResponse.data)
+                        }
                     }
                 } catch {
                     print("Error decoding response: \(error)")
@@ -84,5 +103,31 @@ class TwitchAPI {
             
             task.resume()
         }
+    }
+
+    // ユーザーIDからプロフィール画像を含むユーザー情報を取得するメソッド
+    private func fetchUserInfo(userId: String, completion: @escaping (UserInfo?) -> Void) {
+        let url = URL(string: "https://api.twitch.tv/helix/users?id=\(userId)")!
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(self.accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue(self.clientId, forHTTPHeaderField: "Client-Id")
+
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            guard let data = data, error == nil else {
+                print("Error fetching user info: \(error?.localizedDescription ?? "Unknown error")")
+                completion(nil)
+                return
+            }
+
+            do {
+                let decodedResponse = try JSONDecoder().decode(UserInfoResponse.self, from: data)
+                completion(decodedResponse.data.first)
+            } catch {
+                print("Error decoding user info: \(error)")
+                completion(nil)
+            }
+        }
+
+        task.resume()
     }
 }

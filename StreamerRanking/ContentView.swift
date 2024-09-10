@@ -62,7 +62,7 @@ struct ContentView: View {
                 }
         )
     }
-    
+
     private func fetchStreamers() {
         let api = TwitchAPI()
         api.fetchTopStreamers { streamers in

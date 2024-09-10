@@ -15,7 +15,7 @@ struct TwitchView: View {
 
                 // データ再ロードボタン
                 Button(action: {
-                    refreshStreamers() // 個別にデータを再ロード
+                    refreshStreamers() // データを再ロード
                 }) {
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: 18))
@@ -46,15 +46,20 @@ struct TwitchView: View {
             List(streamers) { streamer in
                 VStack(alignment: .leading) {
                     HStack {
-                        // 配信者のアイコンを表示
-                        AsyncImage(url: URL(string: streamer.profileImageUrl.replacingOccurrences(of: "{width}x{height}", with: "150x150"))) { image in
+                        // プロフィール画像を表示
+                        AsyncImage(url: URL(string: streamer.profileImageUrl ?? "https://via.placeholder.com/150")) { image in
                             image.resizable()
                                 .aspectRatio(contentMode: .fill)
                                 .frame(width: 50, height: 50)
                                 .clipShape(Circle())
                         } placeholder: {
-                            ProgressView()
+                            // 読み込み中はデフォルト画像を表示
+                            Image(systemName: "person.circle")
+                                .resizable()
+                                .frame(width: 50, height: 50)
+                                .foregroundColor(.gray)
                         }
+
                         VStack(alignment: .leading) {
                             Text(streamer.userName)
                                 .font(.headline)
@@ -64,17 +69,33 @@ struct TwitchView: View {
                                 .font(.subheadline)
                         }
                     }
+                    
+                    // ストリームのサムネイル画像を表示（thumbnailUrlが必須の場合）
+                    let thumbnailUrl = streamer.thumbnailUrl.replacingOccurrences(of: "{width}x{height}", with: "320x180")
+                    
+                    AsyncImage(url: URL(string: thumbnailUrl)) { image in
+                        image.resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(height: 180)
+                            .cornerRadius(10)
+                    } placeholder: {
+                        ProgressView()
+                            .frame(width: 320, height: 180)
+                    }
+
+                    // 配信リンクを表示
                     if let url = URL(string: "https://www.twitch.tv/\(streamer.userLogin)") {
                         Link("Watch Stream", destination: url)
                             .font(.footnote)
                             .foregroundColor(.blue)
                     }
                 }
+                .padding(.bottom, 16)
             }
         }
     }
 
-    // 個別のデータリフレッシュ処理
+    // データリフレッシュ処理
     private func refreshStreamers() {
         api.fetchTopStreamers { fetchedStreamers in
             if let fetchedStreamers = fetchedStreamers {

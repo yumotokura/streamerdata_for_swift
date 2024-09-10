@@ -46,15 +46,20 @@ struct StreamerListView: View {
             List(streamers) { streamer in
                 VStack(alignment: .leading) {
                     HStack {
-                        // 配信者のアイコンを表示
-                        AsyncImage(url: URL(string: streamer.profileImageUrl.replacingOccurrences(of: "{width}x{height}", with: "150x150"))) { image in
+                        // プロフィール画像を表示
+                        AsyncImage(url: URL(string: streamer.profileImageUrl ?? "https://via.placeholder.com/150")) { image in
                             image.resizable()
                                 .aspectRatio(contentMode: .fill)
                                 .frame(width: 50, height: 50)
                                 .clipShape(Circle())
                         } placeholder: {
-                            ProgressView()
+                            // 読み込み中はデフォルト画像を表示
+                            Image(systemName: "person.circle")
+                                .resizable()
+                                .frame(width: 50, height: 50)
+                                .foregroundColor(.gray)
                         }
+
                         VStack(alignment: .leading) {
                             // 配信者の名前と視聴者数を表示
                             Text(streamer.userName)
@@ -65,6 +70,18 @@ struct StreamerListView: View {
                                 .font(.subheadline)
                         }
                     }
+                    
+                    // ストリームのサムネイル画像を表示
+                    AsyncImage(url: URL(string: streamer.thumbnailUrl.replacingOccurrences(of: "{width}x{height}", with: "320x180"))) { image in
+                        image.resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(height: 180)
+                            .cornerRadius(10)
+                    } placeholder: {
+                        ProgressView()
+                            .frame(width: 320, height: 180)
+                    }
+
                     // 配信リンクを表示
                     if let url = URL(string: "https://www.twitch.tv/\(streamer.userLogin)") {
                         Link("Watch Stream", destination: url)
@@ -72,6 +89,7 @@ struct StreamerListView: View {
                             .foregroundColor(.blue)
                     }
                 }
+                .padding(.bottom, 16)
             }
         }
     }

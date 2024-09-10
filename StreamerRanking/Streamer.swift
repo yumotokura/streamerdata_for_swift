@@ -1,13 +1,14 @@
 import Foundation
 
+// Streamer情報を扱う構造体
 struct Streamer: Identifiable, Decodable {
     var id: String { userId }
     let userId: String
     let userName: String
     let userLogin: String
     let viewerCount: Int
-    let profileImageUrl: String
-//    let title: String  // 配信タイトル
+    var profileImageUrl: String? // プロフィール画像のURL
+    let thumbnailUrl: String // ストリームのサムネイル画像のURL
     let gameName: String // ゲーム名
 
     enum CodingKeys: String, CodingKey {
@@ -15,18 +16,40 @@ struct Streamer: Identifiable, Decodable {
         case userName = "user_name"
         case userLogin = "user_login"
         case viewerCount = "viewer_count"
-        case profileImageUrl = "thumbnail_url"
-//        case title = "title" // 配信タイトル
-        case gameName = "game_name" // ゲーム名
+        case profileImageUrl = "profile_image_url"
+        case thumbnailUrl = "thumbnail_url"
+        case gameName = "game_name"
     }
 }
 
+// Twitch APIからのストリーマー一覧のレスポンス
 struct TwitchResponse: Decodable {
-    let data: [Streamer]
+    var data: [Streamer] // ここをletからvarに変更して、後で変更可能にする
 }
 
+// Twitch APIエラーレスポンスを扱う構造体
 struct TwitchErrorResponse: Decodable {
     let error: String
     let status: Int
     let message: String
+}
+
+// UserInfoを扱う構造体（ユーザー情報）
+struct UserInfo: Decodable {
+    let id: String
+    let login: String
+    let displayName: String
+    let profileImageUrl: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case login
+        case displayName = "display_name"
+        case profileImageUrl = "profile_image_url"
+    }
+}
+
+// Twitch APIからのユーザー情報レスポンス
+struct UserInfoResponse: Decodable {
+    let data: [UserInfo]
 }
